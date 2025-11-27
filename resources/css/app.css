@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import 'tailwindcss';
+
+@theme {
+    --color-bcblue: #699DB1;
+    --color-bcblue-dark: #4d8094;
+    --color-bcblue-light: #87b0c0;
+    --color-bcred: #a02a34;
+    --color-bcred-light: #D35D67;
+    --color-bcred-dark: #87111B;
+    --color-bcyellow: #fac13f;
+    --color-bcyellow-dark: #E1A826;
+    --color-bcyellow-light: #FFDB59;
+    --color-bcbrown: #6e6134;
+    --color-bcbrown-light: #887B4E;
+    --color-bcbrown-dark: #55481B;
+    --young-people-start: rgb(31, 21, 80);
+    --young-people-end: rgb(194, 72, 154);
+    --overall-start: rgb(186, 65, 131);
+    --overall-end: rgb(255, 242, 0);
+    --jobshop-start: rgb(86,99,129);
+    --jobshop-end: rgb(53,65,94);
+    --adult-learning-start: rgb(135,197,67);
+    --adult-learning-end: rgb(233,320,31);
+    --higher-education-start: rgb(155,27,52);
+    --higher-education-end: rgb(231,119,38);
+    --apprenticeships-start: rgb(91,67,154);
+    --apprenticeships-end: rgb(6,152,202);
+    
+    --font-roboto: "Roboto", sans-serif; 
+    
+}
+
+@layer utilities {
+
+    .bg-gradient-custom {
+        background-image: linear-gradient(
+            to bottom,
+            var(--gradient-start),
+            var(--gradient-end)
+        );
+    }
+
+    .gradient-young-people {
+        --gradient-start: var(--young-people-start);
+        --gradient-end: var(--young-people-end);
+    }
+    .gradient-overall {
+        --gradient-start: var(--overall-start);
+        --gradient-end: var(--overall-end);
+    }
+
+    .gradient-jobshop {
+        --gradient-start: var(--jobshop-start);
+        --gradient-end: var(--jobshop-end);
+    }
+    .gradient-adult-learning {
+        --gradient-start: var(--adult-learning-start);
+        --gradient-end: var(--adult-learning-end);
+    }
+    .gradient-higher-education {
+        --gradient-start: var(--higher-education-start);
+        --gradient-end: var(--higher-education-end);
+    }
+    .gradient-apprenticeships {
+        --gradient-start: var(--apprenticeships-start);
+        --gradient-end: var(--apprenticeships-end);
+    }
+
+    .glass-highlight {
+        position: relative;
+        overflow: hidden;
+      }
+      .glass-highlight::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 30%;
+        background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0));
+        pointer-events: none;
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+      }
+
+  }
