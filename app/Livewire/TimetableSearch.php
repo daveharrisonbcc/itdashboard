@@ -10,31 +10,36 @@ class TimetableSearch extends Component
 {
     public $roomSearch = '';
     public $date = '';
+    public $startDate = '';
+    public $endDate = '';
     public $onlyFree = false;
 
     public $results = [];
     // groups: [ ['room' => 'DR-A101', 'items' => [ {type:event,event:{...}} | {type:free,start,end} ] ], ... ]
     public $displayItems = [];
 
-    public function updatedRoomSearch()
-    {
-        $this->search();
-    }
+    public function updatedRoomSearch()  { $this->search(); }
+    public function updatedDate()        { $this->search(); }
+    public function updatedStartDate()   { $this->search(); }
+    public function updatedEndDate()     { $this->search(); }
+    public function updatedOnlyFree()    { $this->search(); }
 
-    public function updatedDate()
+    public function mount()
     {
-        $this->search();
-    }
-
-    public function updatedOnlyFree()
-    {
-        $this->search();
+        $today = Carbon::today()->toDateString();
+        $this->startDate = $today;
+        $this->endDate = $today;
     }
 
     public function search()
     {
         $room = trim($this->roomSearch);
-        $date = $this->date ?: Carbon::today()->toDateString();
+
+        $from = $this->startDate ?: $this->date ?: Carbon::today()->toDateString();
+        $to   = $this->endDate ?: $this->startDate ?: $this->date ?: Carbon::today()->toDateString();
+
+        if (empty($from)) $from = Carbon::today()->toDateString();
+        if (empty($to))   $to   = $from;
 
         if (strlen($room) < 2) {
             $this->results = [];
@@ -42,7 +47,7 @@ class TimetableSearch extends Component
             return;
         }
 
-        $this->results = FloorTimetable::selectRaw('
+        $rawResults = FloorTimetable::selectRaw('
             EVENT_ID,
             MIN(STARTDATE) as STARTDATE,
             MIN(START_TIME) as START_TIME,
@@ -50,27 +55,36 @@ class TimetableSearch extends Component
             MAX(ROOMS) as ROOMS,
             MAX(DESCRIPTION) as DESCRIPTION
         ')
-        ->whereDate('STARTDATE', $date)
+        ->whereBetween('STARTDATE', [$from, $to])
         ->where(function($query) use ($room) {
             $query->where('DESCRIPTION', 'LIKE', '%' . $room . '%')
                 ->orWhere('ROOMS', 'LIKE', '%' . $room . '%');
         })
         ->groupBy('EVENT_ID')
+        ->orderBy('ROOMS', 'asc')
         ->orderBy('STARTDATE', 'asc')
         ->orderBy('START_TIME', 'asc')
         ->get()
         ->toArray();
 
-        // Find unique ROOMS labels that include the search term
-        $matchedRows = array_values(array_filter($this->results, function($r) use ($room) {
-            return !empty($r['ROOMS']) && stripos($r['ROOMS'], $room) !== false;
-        }));
+        // NEW: Build a map of roomCode => event rows, splitting ROOMS by comma
+        $roomMap = []; // 'DR-A2-60 (Capacity 48)' => [eventInfo1, eventInfo2, ...]
+        foreach ($rawResults as $row) {
+            // Split on comma, clean spaces, ignore empty
+            $roomTokens = array_filter(array_map('trim', explode(',', $row['ROOMS'] ?? '')));
 
-        // fallback: if nothing matches exactly, show a single "All results" group
-        if (empty($matchedRows)) {
+            foreach ($roomTokens as $token) {
+                if (stripos($token, $room) !== false) {
+                    $roomMap[$token][] = $row;
+                }
+            }
+        }
+
+        // fallback: if no individual room matches search term, show all as single group
+        if (empty($roomMap)) {
             $fallbackItems = array_map(function($r){
                 return ['type' => 'event', 'event' => $r];
-            }, $this->results);
+            }, $rawResults);
 
             $this->displayItems = [
                 ['room' => 'Results', 'items' => $fallbackItems]
@@ -78,64 +92,76 @@ class TimetableSearch extends Component
             return;
         }
 
-        $roomLabels = array_values(array_unique(array_map(function($r){ return $r['ROOMS']; }, $matchedRows)));
-
-        $dayStart = '08:00:00';
-        $dayEnd   = '18:00:00';
         $groups = [];
 
-        foreach ($roomLabels as $roomLabel) {
-            // Collect events that include this room label
-            $eventsForRoom = array_values(array_filter($this->results, function($r) use ($roomLabel) {
-                return !empty($r['ROOMS']) && stripos($r['ROOMS'], $roomLabel) !== false;
-            }));
-
-            // Sort events by start time
+        foreach ($roomMap as $roomLabel => $eventsForRoom) {
+            // Sort by date then time
             usort($eventsForRoom, function($a, $b){
+                $dateCompare = strcmp($a['STARTDATE'] ?? '', $b['STARTDATE'] ?? '');
+                if ($dateCompare !== 0) return $dateCompare;
                 return strcmp($a['START_TIME'] ?? '', $b['START_TIME'] ?? '');
             });
 
-            $pointer = Carbon::parse("{$date} {$dayStart}");
-            $endOfDay = Carbon::parse("{$date} {$dayEnd}");
             $items = [];
 
-            foreach ($eventsForRoom as $ev) {
-                if (empty($ev['START_TIME']) || empty($ev['END_TIME'])) {
+            $groupedByDay = collect($eventsForRoom)->groupBy('STARTDATE');
+            foreach ($groupedByDay as $day => $events) {
+                $dayStart = '08:00:00';
+                $dayEnd   = '18:00:00';
+                $pointer = Carbon::parse("{$day} {$dayStart}");
+                $endOfDay = Carbon::parse("{$day} {$dayEnd}");
+
+                $dayEvents = $events->all();
+
+                // Sort by start time in the day
+                usort($dayEvents, function($a, $b){
+                    return strcmp($a['START_TIME'] ?? '', $b['START_TIME'] ?? '');
+                });
+
+                foreach ($dayEvents as $ev) {
+                    if (empty($ev['START_TIME']) || empty($ev['END_TIME'])) {
+                        $ev['GROUP_DATE'] = $day;
+                        $items[] = ['type' => 'event', 'event' => $ev];
+                        continue;
+                    }
+
+                    $s = Carbon::parse("{$day} {$ev['START_TIME']}");
+                    $e = Carbon::parse("{$day} {$ev['END_TIME']}");
+
+                    if ($e <= $s) {
+                        $ev['GROUP_DATE'] = $day;
+                        $items[] = ['type' => 'event', 'event' => $ev];
+                        continue;
+                    }
+
+                    if ($s->gt($pointer) && $pointer->lt($endOfDay)) {
+                        $freeEnd = $s->lt($endOfDay) ? $s : $endOfDay;
+                        $items[] = [
+                            'type' => 'free',
+                            'start' => $pointer->format('H:i'),
+                            'end'   => $freeEnd->format('H:i'),
+                            'date'  => $day,
+                        ];
+                    }
+
+                    $ev['GROUP_DATE'] = $day;
                     $items[] = ['type' => 'event', 'event' => $ev];
-                    continue;
+                    $pointer = $e->gt($pointer) ? $e : $pointer;
+
+                    if ($pointer->gte($endOfDay)) {
+                        break;
+                    }
                 }
 
-                $s = Carbon::parse("{$date} {$ev['START_TIME']}");
-                $e = Carbon::parse("{$date} {$ev['END_TIME']}");
-
-                if ($e <= $s) {
-                    $items[] = ['type' => 'event', 'event' => $ev];
-                    continue;
-                }
-
-                if ($s->gt($pointer) && $pointer->lt($endOfDay)) {
-                    $freeEnd = $s->lt($endOfDay) ? $s : $endOfDay;
+                // Slot after last event of day?
+                if ($pointer->lt($endOfDay)) {
                     $items[] = [
-                        'type' => 'free',
+                        'type'  => 'free',
                         'start' => $pointer->format('H:i'),
-                        'end'   => $freeEnd->format('H:i'),
+                        'end'   => $endOfDay->format('H:i'),
+                        'date'  => $day,
                     ];
                 }
-
-                $items[] = ['type' => 'event', 'event' => $ev];
-                $pointer = $e->gt($pointer) ? $e : $pointer;
-
-                if ($pointer->gte($endOfDay)) {
-                    break;
-                }
-            }
-
-            if ($pointer->lt($endOfDay)) {
-                $items[] = [
-                    'type' => 'free',
-                    'start' => $pointer->format('H:i'),
-                    'end'   => $endOfDay->format('H:i'),
-                ];
             }
 
             // Only show free slots if checkbox is enabled
