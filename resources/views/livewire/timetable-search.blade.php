@@ -12,6 +12,10 @@
         class="border rounded p-2"
     >
 
+    <label class="inline-flex items-center ml-4">
+        <input type="checkbox" wire:model.live="onlyFree" class="mr-2">
+        <span>Only show freeslots</span>
+    </label>
     <div class="mt-4 space-y-6">
         @if(!empty($displayItems))
             @foreach($displayItems as $group)

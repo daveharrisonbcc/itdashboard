@@ -4,15 +4,16 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use App\Models\FloorTimetable;
-use App\Models\SidTimetable;
 use Carbon\Carbon;
 
 class TimetableSearch extends Component
 {
     public $roomSearch = '';
     public $date = '';
+    public $onlyFree = false;
+
     public $results = [];
-    // now groups: [ ['room' => 'DR-A101', 'items' => [ {type:event, event:...} | {type:free,start,end} ] ], ... ]
+    // groups: [ ['room' => 'DR-A101', 'items' => [ {type:event,event:{...}} | {type:free,start,end} ] ], ... ]
     public $displayItems = [];
 
     public function updatedRoomSearch()
@@ -21,6 +22,11 @@ class TimetableSearch extends Component
     }
 
     public function updatedDate()
+    {
+        $this->search();
+    }
+
+    public function updatedOnlyFree()
     {
         $this->search();
     }
@@ -47,7 +53,7 @@ class TimetableSearch extends Component
         ->whereDate('STARTDATE', $date)
         ->where(function($query) use ($room) {
             $query->where('DESCRIPTION', 'LIKE', '%' . $room . '%')
-                  ->orWhere('ROOMS', 'LIKE', '%' . $room . '%');
+                ->orWhere('ROOMS', 'LIKE', '%' . $room . '%');
         })
         ->groupBy('EVENT_ID')
         ->orderBy('STARTDATE', 'asc')
@@ -55,7 +61,7 @@ class TimetableSearch extends Component
         ->get()
         ->toArray();
 
-        // find rows that mention the search term
+        // Find unique ROOMS labels that include the search term
         $matchedRows = array_values(array_filter($this->results, function($r) use ($room) {
             return !empty($r['ROOMS']) && stripos($r['ROOMS'], $room) !== false;
         }));
@@ -72,21 +78,19 @@ class TimetableSearch extends Component
             return;
         }
 
-        // build unique room labels from matched rows (keeps the ROOMS string as label)
         $roomLabels = array_values(array_unique(array_map(function($r){ return $r['ROOMS']; }, $matchedRows)));
 
         $dayStart = '08:00:00';
-        $dayEnd   = '22:00:00';
-
+        $dayEnd   = '18:00:00';
         $groups = [];
 
         foreach ($roomLabels as $roomLabel) {
-            // collect events that include this room label (some rows may reference multiple rooms)
+            // Collect events that include this room label
             $eventsForRoom = array_values(array_filter($this->results, function($r) use ($roomLabel) {
                 return !empty($r['ROOMS']) && stripos($r['ROOMS'], $roomLabel) !== false;
             }));
 
-            // sort by start time
+            // Sort events by start time
             usort($eventsForRoom, function($a, $b){
                 return strcmp($a['START_TIME'] ?? '', $b['START_TIME'] ?? '');
             });
@@ -119,7 +123,6 @@ class TimetableSearch extends Component
                 }
 
                 $items[] = ['type' => 'event', 'event' => $ev];
-
                 $pointer = $e->gt($pointer) ? $e : $pointer;
 
                 if ($pointer->gte($endOfDay)) {
@@ -135,7 +138,15 @@ class TimetableSearch extends Component
                 ];
             }
 
-            $groups[] = ['room' => $roomLabel, 'items' => $items];
+            // Only show free slots if checkbox is enabled
+            if ($this->onlyFree) {
+                $freeOnly = array_values(array_filter($items, function($it){ return ($it['type'] ?? '') === 'free'; }));
+                if (!empty($freeOnly)) {
+                    $groups[] = ['room' => $roomLabel, 'items' => $freeOnly];
+                }
+            } else {
+                $groups[] = ['room' => $roomLabel, 'items' => $items];
+            }
         }
 
         $this->displayItems = $groups;
@@ -145,5 +156,4 @@ class TimetableSearch extends Component
     {
         return view('livewire.timetable-search');
     }
-
 }
