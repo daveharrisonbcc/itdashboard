@@ -6,6 +6,7 @@
             <input
                 wire:model.live.debounce.500ms="roomSearch"
                 name="roomSearch"
+                id="roomSearch"
                 type="text"
                 class="border rounded p-2 mr-2"
                 placeholder="Search..."
@@ -16,6 +17,7 @@
             <input
                 wire:model.live="startDate"
                 name="startDate"
+                id="startDate"
                 type="date"
                 class="border rounded p-2"
                 placeholder="From"
@@ -27,6 +29,7 @@
             <input
                 wire:model.live="endDate"
                 name="endDate"
+                id="endDate"
                 type="date"
                 class="border rounded p-2"
                 placeholder="To"

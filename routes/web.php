@@ -22,11 +22,11 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 if (config('app.env') === 'production') {
     Livewire::setUpdateRoute(function ($handle) {
-        return Route::post('/pub/digitalsignage/timetable-screen/public/livewire/update', $handle)->name('app.livewire.update');
+        return Route::post('/itservices/livewire/update', $handle)->name('app.livewire.update');
     });
 
     Livewire::setScriptRoute(static function ($handle) {
-        return Route::get('/pub/digitalsignage/timetable-screen/public/livewire/livewire.js', $handle)->name('get-route');
+        return Route::get('/itservices/livewire/livewire.js', $handle)->name('get-route');
     });
 
 }
