@@ -16,8 +16,8 @@
         <link rel="icon" type="image/png" sizes="16x16" href="{{ Vite::asset('resources/favicons/favicon-16x16.png') }}">
       
     </head>
-    <body class="h-full cursor-none">
-        <div class="min-h-full bg-gradient-custom gradient-young-people h-full">
+    <body>
+        <div class="">
     
 
             <main class="h-full">
