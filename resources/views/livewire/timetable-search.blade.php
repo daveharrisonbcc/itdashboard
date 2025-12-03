@@ -15,24 +15,39 @@
        <div>
         <label for="startDate" class="block mb-1 font-medium">Date From:</label>
             <input
+                x-data
+                x-on:change="
+                    if ($event.target.value > $refs.endDate.value) {
+                        $refs.endDate.value = $event.target.value;
+                        $refs.endDate.dispatchEvent(new Event('input'));
+                    }
+                "
                 wire:model.live="startDate"
                 name="startDate"
                 id="startDate"
                 type="date"
                 class="border rounded p-2"
                 placeholder="From"
-                value
+                x-ref="startDate"
             >
         </div>
         <div>
             <label for="endDate" class="block mb-1 font-medium">Date To:</label>
             <input
+                x-data
+                x-on:change="
+                    if ($event.target.value < $refs.startDate.value) {
+                        $refs.startDate.value = $event.target.value;
+                        $refs.startDate.dispatchEvent(new Event('input'));
+                    }
+                "
                 wire:model.live="endDate"
                 name="endDate"
                 id="endDate"
                 type="date"
                 class="border rounded p-2"
                 placeholder="To"
+                x-ref="endDate"
             >
         </div>
         <div>

@@ -20,8 +20,30 @@ class TimetableSearch extends Component
 
     public function updatedRoomSearch()  { $this->search(); }
     public function updatedDate()        { $this->search(); }
-    public function updatedStartDate()   { $this->search(); }
-    public function updatedEndDate()     { $this->search(); }
+
+    public function updatedStartDate()
+    {
+        // If the new start date is after the current end date, set end date to start date
+        if ($this->startDate && $this->endDate && $this->startDate > $this->endDate) {
+            $this->endDate = $this->startDate;
+        }
+
+        if($this->roomSearch != '') {
+            $this->search();
+        }
+       
+    }
+
+    public function updatedEndDate()
+    {
+        // If the new end date is before the current start date, set start date to end date
+        if ($this->endDate && $this->startDate && $this->endDate < $this->startDate) {
+            $this->startDate = $this->endDate;
+        }
+       if($this->roomSearch != '') {
+            $this->search();
+        }
+    }
     public function updatedOnlyFree()    { $this->search(); }
 
     public function mount()
