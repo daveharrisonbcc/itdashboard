@@ -75,6 +75,7 @@ class TimetableSearch extends Component
             MIN(START_TIME) as START_TIME,
             MAX(END_TIME) as END_TIME,
             MAX(ROOMS) as ROOMS,
+            MAX(TUTORS) as TUTORS,
             MAX(DESCRIPTION) as DESCRIPTION
         ')
         ->whereBetween('STARTDATE', [$from, $to])

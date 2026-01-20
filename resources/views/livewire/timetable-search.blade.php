@@ -83,6 +83,7 @@
                                 <th class="border px-2 py-1">Start</th>
                                 <th class="border px-2 py-1">End</th>
                                 <th class="border px-2 py-1">Description</th>
+                                <th class="border px-2 py-1">Tutor(s)</th>
                                 <th class="border px-2 py-1">Room(s)</th>
                             </tr>
                         </thead>
@@ -95,6 +96,7 @@
                                         <td class="px-2 py-1 border">{{ \Carbon\Carbon::parse($row['START_TIME'])->format('H:i') }}</td>
                                         <td class="px-2 py-1 border">{{ \Carbon\Carbon::parse($row['END_TIME'])->format('H:i') }}</td>
                                         <td class="border px-2 py-1">{{ $row['DESCRIPTION'] }}</td>
+                                        <td class="border px-2 py-1">{{ preg_replace('/,\s*/', ', ', $row['TUTORS']) }}</td>
                                         <td class="border px-2 py-1">{{ $row['ROOMS'] }}</td>
                                     </tr>
                                 @else
@@ -105,6 +107,7 @@
                                         <td class="px-2 py-1 border text-green-800 font-medium">{{ $item['start'] }}</td>
                                         <td class="px-2 py-1 border text-green-800 font-medium">{{ $item['end'] }}</td>
                                         <td class="border px-2 py-1 text-green-800">Free</td>
+                                        <td class="border px-2 py-1 text-green-800"></td>
                                         <td class="border px-2 py-1 text-green-800">{{ $group['room'] }}</td>
                                     </tr>
                                 @endif
